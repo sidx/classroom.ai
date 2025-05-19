@@ -1,0 +1,19 @@
+env: "local"
+port: 8099
+host: "localhost"
+debug: true
+mode: "server"
+server_type: "public"
+agentix_main_url: "http://localhost:8081"
+postgres_fynix_almanac_read_write: "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/classroomai"
+realm: "fexz0"
+K8S_POD_NAMESPACE: "temp"
+K8S_NODE_NAME: "temp"
+K8S_POD_NAME: "temp"
+elastic_search_url: "http://localhost:9200"
+
+openai_gpt4o_api_key: ""
+
+sentry_environment: "development"
+sentry_dsn: ""
+kafka_broker_list: "127.0.0.1:9092"
