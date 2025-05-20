@@ -1,11 +1,12 @@
+from indexing.db import ElasticSearchVectorDb
+from indexing.embeddings import EmbeddingGenerator
+
 from config.logging import logger
 from config.settings import loaded_config
 from kb.dao import SourceItemDao, ChunkDao, IngestionRunDao, KnowledgeBaseDao, IngestionErrorDao
 from kb.factory import KnowledgeBaseFactory
 from kb.models import KBState, IntegrationType
 from utils.connection_handler import ConnectionHandler
-from utils.vector_db import ElasticSearchAdapter
-from utils.vector_db.embeddings import EmbeddingGenerator
 import os
 from typing import Dict, List, Any
 
@@ -24,7 +25,9 @@ async def knowledge_base_consumer(message):
         payload_data = message.get('payload', {}).get('payload', {})
         logger.info(f"Payload data in consumer: {payload_data}")
 
-        extractor, transformer, loader = get_etl(payload_data)
+        db = ElasticSearchVectorDb()
+        db.elastic_search_url = [loaded_config.elastic_search_url]
+        extractor, transformer, loader = get_etl(payload_data, db)
         connection_handler = ConnectionHandler(connection_manager=loaded_config.connection_manager)
         session = connection_handler.session
         embedder = EmbeddingGenerator(api_key=loaded_config.openai_gpt4o_api_key)
@@ -46,7 +49,7 @@ async def knowledge_base_consumer(message):
             extracted_data,
             int(payload_data["knowledge_base_id"]),
             payload_data["mode"],
-            source_item_dao, chunk_dao, ElasticSearchAdapter(), "knowledge_base_index")
+            source_item_dao, chunk_dao, db, "knowledge_base_index")
 
         await source_item_dao.bulk_insert(source_items)
 
@@ -224,7 +227,7 @@ def build_folder_structure_from_paths(file_records: List[dict]) -> Dict[str, Any
     return folder_tree
 
 
-def get_etl(payload: dict):
+def get_etl(payload: dict, db):
     provider = payload.get("provider")
 
     if provider == "azure_devops" or provider == "github" or provider == "gitlab":
@@ -234,7 +237,7 @@ def get_etl(payload: dict):
 
         extractor = KnowledgeBaseFactory.get_extractor( provider, repo_url=repo_url, branch_name=branch, pat=pat)
         transformer = KnowledgeBaseFactory.get_transformer("repo_transformer")
-        loader = KnowledgeBaseFactory.get_loader("elasticsearch", db_adapter=ElasticSearchAdapter())
+        loader = KnowledgeBaseFactory.get_loader("elasticsearch", db=db)
         return extractor, transformer, loader
 
     elif provider == "quip":
@@ -243,7 +246,7 @@ def get_etl(payload: dict):
 
         extractor = KnowledgeBaseFactory.get_extractor(provider, pat=pat, urls=urls, max_docs_per_kb=int(loaded_config.max_docs_per_kb))
         transformer = KnowledgeBaseFactory.get_transformer("quip_transformer")
-        loader = KnowledgeBaseFactory.get_loader("elasticsearch", db_adapter=ElasticSearchAdapter())
+        loader = KnowledgeBaseFactory.get_loader("elasticsearch", db=db)
         return extractor, transformer, loader
 
     raise ValueError(f"Unsupported provider: {provider}")
