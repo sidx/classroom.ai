@@ -11,7 +11,7 @@ K8S_POD_NAMESPACE: "temp"
 K8S_NODE_NAME: "temp"
 K8S_POD_NAME: "temp"
 elastic_search_url: "http://localhost:9200"
-
+consumer_type: ""
 openai_gpt4o_api_key: ""
 
 sentry_environment: "development"
