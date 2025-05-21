@@ -30,12 +30,12 @@ async def start_loading(
 ):
     return await view.start_loading(request, connection_handler, user_data)
 
-# @knowledge_base_router.post("/vector-search")
-# async def get_vector_search(
-#         request: GetVectorSearchRequest = Body(...),
-#         view: KnowledgeBaseView = Depends(get_knowledge_base_view)
-# ):
-#     return await view.get_vector_search(request)
+@knowledge_base_router.post("/vector-search")
+async def get_vector_search(
+        request: GetVectorSearchRequest = Body(...),
+        view: KnowledgeBaseView = Depends(get_knowledge_base_view)
+):
+    return await view.get_vector_search(request)
 #
 # @knowledge_base_router.get("/get-integrations")
 # async def get_integrations(

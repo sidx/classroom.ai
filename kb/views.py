@@ -17,8 +17,8 @@ class KnowledgeBaseView:
     async def start_loading(self, request: KnowledgeBaseRequest, connection_handler: ConnectionHandler, user_data: UserData) -> ResponseData:
         return await self.knowledge_base_service.start_loading(request, connection_handler, user_data)
 
-    # async def get_vector_search(self, request: GetVectorSearchRequest) -> ResponseData:
-    #     return await self.knowledge_base_service.get_vector_search(request)
+    async def get_vector_search(self, request: GetVectorSearchRequest) -> ResponseData:
+        return await self.knowledge_base_service.get_vector_search(request)
     #
     # async def get_integrations(self) -> ResponseData:
     #     return await self.knowledge_base_service.get_integrations()

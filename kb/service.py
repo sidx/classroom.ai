@@ -1,7 +1,8 @@
 from typing import Optional, List
 import copy
 from indexing.db import ElasticSearchVectorDb
-from indexing.serializers import FileContent, SourceItemKind
+from indexing.embeddings import EmbeddingGenerator
+from indexing.serializers import FileContent, SourceItemKind, VectorSearchRequest
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 from config.logging import logger
@@ -228,35 +229,41 @@ class KnowledgeBaseService:
             logger.error(f"Failed to start loading Local File: {str(e)}")
             return ResponseData.model_construct(success=False, message=f"Transaction failed: {str(e)}")
 
-    # async def get_vector_search(self, request: GetVectorSearchRequest) -> ResponseData:
-    #     response_data = ResponseData.model_construct(success=False)
-    #     logger.info(f"get_vector_search method invoked")
-    #
-    #     try:
-    #         for i in request.knowledge_base_id:
-    #             has_access = await _call_check_data_source_access(i, request.user_id, request.org_id, request.team_id)
-    #             if not has_access:
-    #                 return ResponseData.model_construct(success=False, message="User does not have access to this knowledge base")
-    #
-    #         await self.vector_db.connect()
-    #
-    #         # Call search_and_fetch_content with the correct index name and data source string
-    #         result = await self.vector_db.search_and_fetch_content(
-    #             request=request,
-    #             index_name="knowledge_base_index"
-    #         )
-    #
-    #         response_data.success = True
-    #         response_data.data = result
-    #         logger.info(f"get_vector_search method fetched")
-    #         return response_data
-    #
-    #     except Exception as e:
-    #         logger.error(f"Search failed for request: {request.dict()}. Error: {str(e)}")
-    #         raise ApiException(f"Search operation failed: {str(e)}")
-    #
-    #     finally:
-    #         await self.vector_db.close()
+    async def get_vector_search(self, request: GetVectorSearchRequest) -> ResponseData:
+        response_data = ResponseData.model_construct(success=False)
+        logger.info(f"get_vector_search method invoked")
+
+        try:
+            # for i in request.knowledge_base_id:
+            #     has_access = await _call_check_data_source_access(i, request.user_id, request.org_id, request.team_id)
+            #     if not has_access:
+            #         return ResponseData.model_construct(success=False, message="User does not have access to this knowledge base")
+
+            await self.vector_db.connect()
+            vector_search = VectorSearchRequest(
+                query = request.query,
+                knowledge_base_id = request.knowledge_base_id,
+                matching_percentage = request.matching_percentage,
+                top_answer_count = request.top_answer_count
+            )
+            # Call search_and_fetch_content with the correct index name and data source string
+            result = await self.vector_db.search_content(
+                request=vector_search,
+                index_name="knowledge_base_index",
+                embedding_generator= EmbeddingGenerator(api_key=loaded_config.openai_gpt4o_api_key)
+            )
+
+            response_data.success = True
+            response_data.data = result
+            logger.info(f"get_vector_search method fetched")
+            return response_data
+
+        except Exception as e:
+            logger.error(f"Search failed for request: {request.dict()}. Error: {str(e)}")
+            raise ApiException(f"Search operation failed: {str(e)}")
+
+        finally:
+            await self.vector_db.close()
 
     async def get_integrations(self) -> ResponseData:
         logger.info(f"get_integrations method invoked")
