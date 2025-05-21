@@ -123,7 +123,6 @@ class AzureDevOpsStrategy(ProviderStrategy):
                     settings_json=settings_json,  # Add the settings_json here
                     org_id=user_data.orgId if user_data else None,
                     is_updatable=provider_context.is_updatable if provider_context.is_updatable else False
-
                 )
 
                 # if team_id:

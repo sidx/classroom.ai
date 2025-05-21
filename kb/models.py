@@ -28,6 +28,7 @@ class IntegrationType(enum.Enum):
     quip = "quip"
     slack = "slack"
     custom = "custom"
+    local = "local"
 
 
 class KBState(enum.Enum):

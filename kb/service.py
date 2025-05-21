@@ -1,19 +1,24 @@
 from typing import Optional, List
-
+import copy
 from indexing.db import ElasticSearchVectorDb
+from indexing.serializers import FileContent, SourceItemKind
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from datetime import datetime, timezone
 from config.logging import logger
 from config.settings import loaded_config
 from kb.dao import IntegrationDao, KnowledgeBaseDao, IngestionRunDao
 from kb.factory import KnowledgeBaseFactory
+from kb.models import KBState
 from kb.serializers import KnowledgeBaseRequest, GetVectorSearchRequest, LocalFileContext, ProviderContext, \
     GetKBStatusRequest, ShareKnowledgeBaseRequest, GetKbRequest, UpdateKB
 # from clerk_integration.utils import UserData
-
+import hashlib
+import uuid
 from kb.strategies import ProviderStrategyFactory
 from utils.connection_handler import ConnectionHandler
 from utils.exceptions import ApiException, CustomException
+from utils.kafka.constants import KAFKA_SERVICE_CONFIG_MAPPING, KafkaServices, ETL_EXTERNAL_DATA
+from utils.kafka.kafka_utils import almanac_partitioner
 from utils.serializers import ResponseData
 # from knowledge_base.locksmith_calls import (
 #     _call_grant_data_source_access,
@@ -52,7 +57,7 @@ class KnowledgeBaseService:
             )
 
         elif request.context == "add_context_through_local_files":
-            return await self._handle_local_file_context(request.add_context_through_local_files)
+            return await self._handle_local_file_context(request.add_context_through_local_files, user_data, connection_handler, request.team_id)
 
         else:
             logger.error(f"Unsupported context type: {request.context}")
@@ -104,17 +109,124 @@ class KnowledgeBaseService:
             logger.error(f"Unsupported provider: {provider_context.provider}")
 
 
-    async def _handle_local_file_context(self, local_context: LocalFileContext) -> ResponseData:
-        if not local_context:
-            logger.error("Local file context missing")
-            return ResponseData.model_construct(success=False, message="Local file context missing")
+    async def _handle_local_file_context(self, local_context: LocalFileContext, user_data: UserData, connection_handler: ConnectionHandler, team_id) -> ResponseData:
+        try:
+            if not local_context:
+                logger.error("Local file context missing")
+                return ResponseData.model_construct(success=False, message="Local file context missing")
 
-        logger.info(f"Received local file context: {local_context}")
-        # Right now no action for local files
-        return ResponseData.model_construct(
-            success=True,
-            message="Local file context received successfully. No action performed yet."
-        )
+            logger.info(f"Received local file context: {local_context}")
+            # Right now no action for local files
+            if not local_context:
+                logger.error("Local context data missing")
+                return ResponseData.model_construct(success=False, message="Provider context missing")
+
+            integration = await self.integration_dao.get_by_type(local_context.provider)
+            if not integration:
+                logger.error(f"Integration not found for type: {local_context.provider} and org_id: {user_data.orgId}")
+                return ResponseData.model_construct(success=False, message="Integration not found")
+
+            kb = None
+
+            if not local_context.kb_id:
+
+                # Check for existing knowledge base with same source identifier and user
+                existing_kb = await self.knowledge_base_dao.get_by_source_and_user(
+                    source_identifier=local_context.path,
+                    user_id=user_data.userId if user_data else None,
+                    org_id=user_data.orgId if user_data else None
+                )
+
+                if existing_kb:
+                    logger.info(f"User already has a knowledge base for this source: {existing_kb.id}")
+                    return ResponseData.model_construct(
+                        success=False,
+                        message="You already have a knowledge base for this repository",
+                        data={"existing_kb_id": existing_kb.id}
+                    )
+                # Create settings_json with provider and credentials
+                settings_json = {
+                    "provider": local_context.provider.value,
+                    "credentials": {},
+                    # Store user info for system operations like cron jobs
+                    "user_id": user_data.userId if user_data else None,
+                    "org_id": user_data.orgId if user_data else None
+                }
+
+                kb = await self.knowledge_base_dao.create_knowledge_base(
+                    integration_id=integration.id,
+                    name=local_context.kb_name,
+                    source_identifier=local_context.path,
+                    kb_type="file",
+                    state=KBState.indexing,
+                    team_id=None,
+                    last_indexed_at=datetime.now(timezone.utc),
+                    created_by=user_data.userId if user_data else None,
+                    settings_json=settings_json,  # Add the settings_json here
+                    org_id=user_data.orgId if user_data else None,
+                    is_updatable=False
+
+                )
+
+                # if team_id:
+                #     await _call_grant_data_source_access(team_id, knowledge_base_id=kb.id, user_data=None)
+                # await _call_grant_data_source_access(knowledge_base_id=kb.id, user_id=user_data.userId, user_data=None,
+                #                                      org_id=None, team_id=None)
+            else:
+                kb = await self.knowledge_base_dao.get_by_id(int(local_context.kb_id))
+
+                if not kb:
+                    raise ValueError(f"Knowledge base with id {local_context.kb_id} does not exist.")
+
+                await self.knowledge_base_dao.update_state_by_id(kb.id, KBState.updating)
+
+            ingestion_run = await self.ingestion_run_dao.create_ingestion_run(
+                kb_id=kb.id,
+                status="running"
+            )
+            logger.info(f"[Local File] IngestionRun created with ID: {ingestion_run.id}")
+
+            event = {
+                "payload": {
+                    "provider": str(local_context.provider.value),
+                    "knowledge_base_id": kb.id,
+                    "path": local_context.path,
+                    "content": local_context.content,
+                    "version_tag" : '1.0',
+                    "provider_item_id" : 'local',
+                    "checksum" : hashlib.sha256(local_context.content.encode()).hexdigest(),
+                    "uuid_str" : str(uuid.uuid4()),
+                    "kind" : SourceItemKind.file.value,
+                    "ingestion_run_id": ingestion_run.id,
+                    "mode": "UPDATE" if local_context.kb_id else "ADD"
+                }
+            }
+            logger.info(f"Event to be emitted: {event}")
+
+            await connection_handler.event_emitter.emit(
+                topics=KAFKA_SERVICE_CONFIG_MAPPING[KafkaServices.almanac][ETL_EXTERNAL_DATA]["topics"],
+                partition_value=str(almanac_partitioner.partition()),
+                event=event
+            )
+
+            await connection_handler.session.commit()
+            return ResponseData.model_construct(
+                success=True,
+                data={
+                    "kb": {
+                        "id": kb.id,
+                        "name": kb.name,
+                        "source_identifier": kb.source_identifier,
+                        "kb_type": kb.kb_type,
+                        "state": kb.state.value if kb.state else None
+                    }
+                }
+            )
+
+        except Exception as e:
+            await connection_handler.session.rollback()
+            logger.error(f"Failed to start loading Local File: {str(e)}")
+            return ResponseData.model_construct(success=False, message=f"Transaction failed: {str(e)}")
 
     # async def get_vector_search(self, request: GetVectorSearchRequest) -> ResponseData:
     #     response_data = ResponseData.model_construct(success=False)

@@ -1,5 +1,6 @@
 from indexing.db import ElasticSearchVectorDb
 from indexing.embeddings import EmbeddingGenerator
+from indexing.serializers import FileContent
 
 from config.logging import logger
 from config.settings import loaded_config
@@ -37,7 +38,23 @@ async def knowledge_base_consumer(message):
         knowledge_base_dao = KnowledgeBaseDao(session)
         ingestion_error_dao = IngestionErrorDao(session)
 
-        extracted_data = await extractor.extract()
+        extracted_data = None
+        if payload_data["provider"] == "local":
+            extracted_data = [
+                FileContent(
+                    path=payload_data["path"],
+                    content=payload_data["content"],
+                    version_tag=payload_data["version_tag"],
+                    provider_item_id=payload_data["provider_item_id"],
+                    # Optional parameters
+                    checksum=payload_data["checksum"],
+                    uuid_str=payload_data["uuid_str"],
+                    kind=payload_data["kind"]
+                ).to_dict()
+            ]
+        else:
+            extracted_data = await extractor.extract()
+
         folder_structure = build_folder_structure_from_paths(extracted_data)
         await knowledge_base_dao.update_memory_key_by_id(
             kb_id=int(payload_data["knowledge_base_id"]),
@@ -230,12 +247,12 @@ def build_folder_structure_from_paths(file_records: List[dict]) -> Dict[str, Any
 def get_etl(payload: dict, db):
     provider = payload.get("provider")
 
-    if provider == "azure_devops" or provider == "github" or provider == "gitlab":
+    if provider == "azure_devops" or provider == "github" or provider == "gitlab" or provider == "local":
         repo_url = payload.get("url")
         branch = payload.get("branch_name")
         pat = payload.get("pat")
 
-        extractor = KnowledgeBaseFactory.get_extractor( provider, repo_url=repo_url, branch_name=branch, pat=pat)
+        extractor = KnowledgeBaseFactory.get_extractor(provider, repo_url=repo_url, branch_name=branch, pat=pat) if provider != "local" else None
         transformer = KnowledgeBaseFactory.get_transformer("repo_transformer")
         loader = KnowledgeBaseFactory.get_loader("elasticsearch", db=db)
         return extractor, transformer, loader
@@ -248,5 +265,6 @@ def get_etl(payload: dict, db):
         transformer = KnowledgeBaseFactory.get_transformer("quip_transformer")
         loader = KnowledgeBaseFactory.get_loader("elasticsearch", db=db)
         return extractor, transformer, loader
+
 
     raise ValueError(f"Unsupported provider: {provider}")

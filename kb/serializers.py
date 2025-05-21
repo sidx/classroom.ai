@@ -27,7 +27,11 @@ class ShareKnowledgeBaseRequest(BaseModel):
     org_id: Optional[List[str]] = []
 
 class LocalFileContext(BaseModel):
-    kb_id: str
+    kb_id: Optional[str] = ""
+    path: str
+    content: str
+    provider: IntegrationType
+    kb_name: Optional[str] = None
 
 class ProviderContext(BaseModel):
     kb_id: str
