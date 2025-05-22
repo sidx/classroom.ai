@@ -21,3 +21,7 @@ class OpenAIException(CustomException):
 
 class AnthropicException(CustomException):
     DEFAULT_ERROR_MESSAGE = "Anthropic AI Exception"
+
+class SessionExpiredException(CustomException):
+    DEFAULT_MESSAGE = "Session Expired for Almanac"
+    ERROR_CODE = 6001

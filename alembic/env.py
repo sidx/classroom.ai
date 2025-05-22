@@ -12,8 +12,7 @@ from utils.sqlalchemy import Base
 
 
 from fex_utilities.threads.models import *
-
-
+import kb.models
 
 config = context.config
 config.set_main_option("sqlalchemy.url", loaded_config.db_url)
@@ -23,7 +22,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 
-
+from kb.models import *
 target_metadata = [Base.metadata]
 
 
