@@ -1,7 +1,7 @@
 import asyncio
 
-from eventbridge.consumer import setup_and_start_consumer
-from eventbridge.health import _healthz, _readyz
+from eventqueue.queue_consumer import setup_and_start_consumer
+from eventqueue.queue_health import _healthz, _readyz, health_check
 
 from config.settings import loaded_config
 from utils.kafka.constants import KafkaServices
@@ -12,9 +12,16 @@ from utils.load_config import run_on_consumer_exit, run_on_consumer_startup
 async def main():
     try:
         await run_on_consumer_startup()
-        asyncio.create_task(setup_and_start_consumer(
+        
+        # Initialize health check
+        await health_check.start()
+        
+        # Start consumer
+        consumer = await setup_and_start_consumer(
             KAFKA_CONSUMER_SETTINGS[KafkaServices.almanac][loaded_config.CONSUMER_TYPE]
-        ))
+        )
+        
+        # Start health check tasks
         asyncio.create_task(_healthz())
         asyncio.create_task(_readyz())
 
@@ -29,3 +36,5 @@ async def main():
         print(f"Exception: {e}")
     finally:
         await run_on_consumer_exit()
+        if 'health_check' in locals():
+            await health_check.stop()

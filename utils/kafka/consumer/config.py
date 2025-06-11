@@ -13,24 +13,23 @@ KAFKA_OFFSET_RESET_STRATEGY = "latest"
 KAFKA_CONSUMER_SETTINGS = {}
 
 COMMON_CONSUMER_CONFIG = {
-    "bootstrap.servers": loaded_config.kafka_bootstrap_servers,
-    "session.timeout.ms": KAFKA_SESSION_TIMEOUT_IN_MS,
-    "default.topic.config": {"auto.offset.reset": KAFKA_OFFSET_RESET_STRATEGY},
-    "group.id": ALMANAC_GROUP_ID,
+    "bootstrap_servers": loaded_config.kafka_bootstrap_servers,
+    "session_timeout_ms": KAFKA_SESSION_TIMEOUT_IN_MS,
+    "auto_offset_reset": KAFKA_OFFSET_RESET_STRATEGY,
+    "group_id": ALMANAC_GROUP_ID,
+    "enable_auto_commit": True,
+    "auto_commit_interval_ms": 5000,
 }
 
 KAFKA_CONSUMER_CONFIG = {
     KafkaServices.almanac: {
         ETL_EXTERNAL_DATA: {
-            "service_name": KafkaServices.almanac,
-            "deserialization_format": KAFKA_SERIALIZATION_FORMAT,
             "consumer_config": COMMON_CONSUMER_CONFIG,
             "topics_configurations": {
                 KAFKA_SERVICE_CONFIG_MAPPING[KafkaServices.almanac][ETL_EXTERNAL_DATA]["topics"][0]: {
                     "tasks": [knowledge_base_consumer]
                 }
-            },
-            "async_kafka": False,
+            }
         }
     }
 }

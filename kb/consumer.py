@@ -23,7 +23,7 @@ async def knowledge_base_consumer(message):
     payload_data = None
     ingestion_error_dao = None
     try:
-        payload_data = message.get('payload', {}).get('payload', {})
+        payload_data = message.get('event', {}).get('payload', {})
         logger.info(f"Payload data in consumer: {payload_data}")
 
         db = ElasticSearchVectorDb()

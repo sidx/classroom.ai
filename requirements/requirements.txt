@@ -4,8 +4,6 @@
 #
 #    pip-compile requirements/requirements.in
 #
-aiofiles==23.2.1
-    # via eventbridge
 aiohappyeyeballs==2.4.4
     # via aiohttp
 aiohttp==3.10.11
@@ -13,7 +11,7 @@ aiohttp==3.10.11
     #   -r requirements/requirements.in
     #   clerk-integration
 aiokafka==0.8.1
-    # via eventbridge
+    # via event-queue
 aiosignal==1.3.1
     # via aiohttp
 alembic==1.12.0
@@ -36,7 +34,6 @@ async-timeout==4.0.3
     # via
     #   aiohttp
     #   aiokafka
-    #   eventbridge
     #   redis
 asyncio==3.4.3
     # via indexing
@@ -94,8 +91,6 @@ confection==0.1.5
     #   weasel
 configargparse==1.7
     # via -r requirements/requirements.in
-confluent-kafka==2.3.0
-    # via eventbridge
 cryptography==43.0.3
     # via
     #   authlib
@@ -121,7 +116,7 @@ elasticsearch==8.13.0
     #   indexing
 eval-type-backport==0.2.2
     # via clerk-backend-api
-eventbridge @ git+ssh://git@ssh.dev.azure.com/v3/GoFynd/SupplyChainGroup/fynd-event-bridge@fex-event-bridge
+event-queue @ git+https://github.com/piyush1856/event-queue.git
     # via -r requirements/requirements.in
 exceptiongroup==1.1.3
     # via
@@ -228,21 +223,17 @@ joblib==1.3.2
 kafka-python==2.0.2
     # via
     #   aiokafka
-    #   eventbridge
+    #   event-queue
 langcodes==3.3.0
     # via spacy
 lxml==5.1.0
     # via -r requirements/requirements.in
-lz4==4.3.2
-    # via eventbridge
 mako==1.3.9
     # via alembic
 markupsafe==2.1.5
     # via
     #   jinja2
     #   mako
-marshmallow==3.20.1
-    # via eventbridge
 mpmath==1.3.0
     # via sympy
 msrest==0.7.1
@@ -306,10 +297,8 @@ packaging==23.1
     # via
     #   -r requirements/requirements.in
     #   aiokafka
-    #   eventbridge
     #   google-cloud-bigquery
     #   huggingface-hub
-    #   marshmallow
     #   spacy
     #   thinc
     #   transformers
@@ -321,7 +310,7 @@ preshed==3.0.9
     #   spacy
     #   thinc
 prometheus-client==0.18.0
-    # via eventbridge
+    # via event-queue
 propcache==0.2.1
     # via yarl
 proto-plus==1.24.0
@@ -369,6 +358,8 @@ python-dateutil==2.9.0.post0
     #   google-cloud-bigquery
 python-dotenv==1.1.0
     # via pydantic-settings
+python-json-logger==3.3.0
+    # via event-queue
 pytz==2023.3.post1
     # via
     #   -r requirements/requirements.in
@@ -520,8 +511,6 @@ typing-inspection==0.4.0
     # via pydantic
 tzlocal==5.2
     # via apscheduler
-ujson==5.8.0
-    # via eventbridge
 urllib3==2.2.2
     # via
     #   elastic-transport

@@ -1,4 +1,4 @@
-eventbridge@git+ssh://git@ssh.dev.azure.com/v3/GoFynd/SupplyChainGroup/fynd-event-bridge@fex-event-bridge #medley
+event-queue @ git+https://github.com/piyush1856/event-queue.git
 fastapi~=0.115.3
 requests~=2.32.0
 SQLAlchemy~=1.4.48

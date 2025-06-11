@@ -204,7 +204,8 @@ class KnowledgeBaseService:
             }
             logger.info(f"Event to be emitted: {event}")
 
-            await connection_handler.event_emitter.emit(
+            event_emitter = await connection_handler.event_emitter
+            await event_emitter.emit(
                 topics=KAFKA_SERVICE_CONFIG_MAPPING[KafkaServices.almanac][ETL_EXTERNAL_DATA]["topics"],
                 partition_value=str(almanac_partitioner.partition()),
                 event=event

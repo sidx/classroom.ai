@@ -176,7 +176,9 @@ class AzureDevOpsStrategy(ProviderStrategy):
             }
             logger.info(f"Event to be emitted: {event}")
 
-            await connection_handler.event_emitter.emit(
+            # Emit event for processing
+            event_emitter = await connection_handler.event_emitter
+            await event_emitter.emit(
                 topics=KAFKA_SERVICE_CONFIG_MAPPING[KafkaServices.almanac][ETL_EXTERNAL_DATA]["topics"],
                 partition_value=str(almanac_partitioner.partition()),
                 event=event
@@ -310,7 +312,9 @@ class GoogleDocsStrategy(ProviderStrategy):
             }
             logger.info(f"Event to be emitted: {event}")
 
-            await connection_handler.event_emitter.emit(
+            # Emit event for processing
+            event_emitter = await connection_handler.event_emitter
+            await event_emitter.emit(
                 topics=KAFKA_SERVICE_CONFIG_MAPPING[KafkaServices.almanac][ETL_EXTERNAL_DATA]["topics"],
                 partition_value=str(almanac_partitioner.partition()),
                 event=event
@@ -456,7 +460,9 @@ class QuipStrategy(ProviderStrategy):
             }
             logger.info(f"Event to be emitted: {event}")
 
-            await connection_handler.event_emitter.emit(
+            # Emit event for processing
+            event_emitter = await connection_handler.event_emitter
+            await event_emitter.emit(
                 topics=KAFKA_SERVICE_CONFIG_MAPPING[KafkaServices.almanac][ETL_EXTERNAL_DATA]["topics"],
                 partition_value=str(almanac_partitioner.partition()),
                 event=event
