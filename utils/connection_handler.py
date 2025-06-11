@@ -3,15 +3,16 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config.settings import loaded_config
-from utils.kafka import AsyncEventEmitterWrapper
+from eventqueue.queue_emitter import QueueEmitterWrapper
+from utils.kafka.producer.config import KAFKA_COMMON_PRODUCER_CONFIG
 
 
 class ConnectionHandler:
 
-    def __init__(self, connection_manager=None, event_bridge=None):
+    def __init__(self, connection_manager=None):
         self._session: Optional[AsyncSession] = None
         self._connection_manager = connection_manager
-        self._event_emitter: Optional[AsyncEventEmitterWrapper] = None
+        self._event_emitter: Optional[QueueEmitterWrapper] = None
 
     @property
     def session(self):
@@ -21,10 +22,10 @@ class ConnectionHandler:
         return self._session
 
     @property
-    def event_emitter(self):
+    async def event_emitter(self):
         if not self._event_emitter:
-            # self._event_emitter = AsyncEventEmitterWrapper(event_emitter=self._event_bridge.event_emitter)
-            self._event_emitter = AsyncEventEmitterWrapper()
+            self._event_emitter = QueueEmitterWrapper(config=KAFKA_COMMON_PRODUCER_CONFIG)
+            await self._event_emitter.initialize()
         return self._event_emitter
 
     async def session_commit(self):
@@ -33,14 +34,13 @@ class ConnectionHandler:
     async def close(self):
         if self._session:
             await self._session.close()
-        # if self._redis_connection:
-        #     await self._redis_connection.close()
+        if self._event_emitter:
+            await self._event_emitter.stop()
 
 
 async def get_connection_handler_for_app():
     connection_handler = ConnectionHandler(
         connection_manager=loaded_config.connection_manager
-        # event_bridge=loaded_config.async_event_bridge
     )
     try:
         yield connection_handler

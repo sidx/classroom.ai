@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from config.settings import loaded_config
+from kb.router import knowledge_base_router
 from prometheus.metrics import REGISTRY
 from app.routing import CustomRequestRoute
 from starlette.responses import Response
@@ -20,6 +21,7 @@ api_router_v1 = APIRouter(prefix='/v1.0', route_class=CustomRequestRoute)
 
 if loaded_config.server_type == "public":
     """ Declare your routes here """
+    api_router_v1.include_router(knowledge_base_router)
 elif loaded_config.server_type == "websocket":
     """ Declare your websockets here """
 else:

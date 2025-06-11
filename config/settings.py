@@ -1,7 +1,7 @@
 import enum
 import os
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 from config.config_parser import docker_args
 from utils.aiohttprequest import AioHttpRequest

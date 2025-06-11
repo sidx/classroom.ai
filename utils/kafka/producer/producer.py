@@ -1,6 +1,6 @@
 from typing import List
-from eventbridge.constants import DEFAULT_DESERIALIZATION_FORMAT, DEFAULT_HASH_FLAG
-from eventbridge.emitter import AsyncEventEmitter
+from eventqueue.queue_constants import DEFAULT_SERIALIZATION_FORMAT, DEFAULT_HASH_FLAG
+from eventqueue.queue_emitter import QueueEmitter
 
 from utils.kafka.producer.config import KAFKA_COMMON_PRODUCER_CONFIG
 from utils.singleton import Singleton
@@ -10,11 +10,11 @@ class AsyncEventBridge(metaclass=Singleton):
     """Class AsyncEventBridge."""
 
     def __init__(self, configurations=KAFKA_COMMON_PRODUCER_CONFIG, *args, **kwargs):
-        self.event_emitter = AsyncEventEmitter(configurations)
+        self.event_emitter = QueueEmitter(configurations)
 
     async def stop_producer(self):
-        if self.event_emitter.kafka_producer and self.event_emitter.kafka_producer.producer:
-            await self.event_emitter.kafka_producer.stop_producer()
+        if self.event_emitter:
+            await self.event_emitter.stop()
 
 
 class AsyncEventEmitterWrapper:
@@ -26,7 +26,7 @@ class AsyncEventEmitterWrapper:
     def add_event_to_queue(self, *,
                            topics, partition_value,
                            event, event_meta={},
-                           serialization_format=DEFAULT_DESERIALIZATION_FORMAT,
+                           serialization_format=DEFAULT_SERIALIZATION_FORMAT,
                            hash_flag=DEFAULT_HASH_FLAG, callback=False, headers=None):
         event_dict = {
             'topics': topics,
@@ -44,7 +44,7 @@ class AsyncEventEmitterWrapper:
         return await self.event_emitter.emit(*args, **kwargs)
 
     async def produce_event(self, *args, **kwargs):
-        return await self.event_emitter.produce_event(*args, **kwargs)
+        return await self.event_emitter.emit(*args, **kwargs)
 
     async def emit_events(self):
         for event in self.event_queue:
