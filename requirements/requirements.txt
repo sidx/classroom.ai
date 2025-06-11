@@ -128,8 +128,6 @@ fastapi==0.115.3
     #   clerk-integration
 fastjsonschema==2.19.1
     # via -r requirements/requirements.in
-fex-utilities @ git+ssh://git@ssh.dev.azure.com/v3/GoFynd/CoPilot/fex_utilities@main
-    # via -r requirements/requirements.in
 filelock==3.13.1
     # via
     #   huggingface-hub
@@ -338,7 +336,6 @@ pydantic==2.11.3
     #   clerk-integration
     #   confection
     #   fastapi
-    #   fex-utilities
     #   indexing
     #   openai
     #   pydantic-settings
@@ -364,7 +361,6 @@ pytz==2023.3.post1
     # via
     #   -r requirements/requirements.in
     #   apscheduler
-    #   fex-utilities
 pyyaml==6.0.1
     # via
     #   -r requirements/requirements.in
@@ -435,7 +431,6 @@ sqlalchemy==1.4.48
     # via
     #   -r requirements/requirements.in
     #   alembic
-    #   fex-utilities
 srsly==2.4.8
     # via
     #   confection
